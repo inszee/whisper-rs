@@ -8,6 +8,11 @@ use std::path::PathBuf;
 
 fn main() {
     let target = env::var("TARGET").unwrap();
+
+    let cargo_target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
+    println!("Cargo Target OS: {}", cargo_target_os);
+    println!("Target: {}", target);
+
     // Link C++ standard library
     if let Some(cpp_stdlib) = get_cpp_link_stdlib(&target) {
         println!("cargo:rustc-link-lib=dylib={}", cpp_stdlib);
@@ -134,11 +139,20 @@ fn main() {
     // move libwhisper.a to where Cargo expects it (OUT_DIR)
     cfg_if! {
         if #[cfg(target_os = "windows")] {
-            std::fs::copy(
-                "Release/whisper.lib",
-                format!("{}/whisper.lib", env::var("OUT_DIR").unwrap()),
-            )
-            .expect("Failed to copy libwhisper.lib");
+            if target.contains("msvc") {
+                std::fs::copy(
+                    "Release/whisper.lib",
+                    format!("{}/whisper.lib", env::var("OUT_DIR").unwrap()),
+                )
+                .expect("Failed to copy libwhisper.lib");
+            } else {
+                std::fs::copy(
+                    "libwhisper.a",
+                    format!("{}/libwhisper.a", env::var("OUT_DIR").unwrap()),
+                )
+                .expect("Failed to copy libwhisper.a");
+            }
+           
         } else {
             std::fs::copy(
                 "libwhisper.a",
